@@ -1,31 +1,34 @@
-import express from "express";
 import { get, merge } from "lodash";
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+import { UserModel } from "../models/user_model";
+dotenv.config();
 
-import { getUserBySessionToken } from "../models/user_model";
+export const isAuthenticated = (
+  req: Request,
+  res: Response,
+  next: (err?: Error) => void
+) => {
+  const token = req.cookies.jwt;
 
-// export const isAdmin = async (
-//   req: express.Request,
-//   res: express.Response,
-//   next: express.NextFunction
-// ) => {
-//   try {
-//     const { email, password } = req.headers;
-
-//     if (email === "mahirwe@gmail.com" && password === "Admin@123!") {
-//       next();
-//     } else {
-//       res.status(403).json({ message: "Unauthorized" });
-//     }
-//   } catch (error) {
-//     console.log(error);
-//     return res.sendStatus(400);
-//   }
-// };
-
+  if (token) {
+    jwt.verify(token, "MARTINE_API", (err: any, decodedToken: any) => {
+      if (err) {
+        console.log(err.message);
+        //res.redirect('/login');
+      } else {
+        next();
+      }
+    });
+  } else {
+    res.status(403).send("Access forbidden: You are not logged in");
+  }
+};
 export const isOwner = async (
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
   try {
     const { id } = req.params;
@@ -44,28 +47,40 @@ export const isOwner = async (
   }
 };
 
-export const isAuthenticated = async (
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
+export const isAdmin = (
+  req: Request,
+  res: Response,
+  next: (err?: Error) => void
 ) => {
-  try {
-    const sessionToken = req.cookies["MARTINE-AUTH"];
+  const token = req.cookies.jwt;
 
-    if (!sessionToken) {
-      return res.sendStatus(403);
-    }
+  if (token) {
+    jwt.verify(token, "MARTINE_API", async (err: any, decodedToken: any) => {
+      if (err) {
+        res
+          .status(403)
+          .send(
+            "Access forbidden: You do not have permission to access this resource."
+          );
+      } else {
+        const user = await UserModel.findById(decodedToken.id);
 
-    const existingUser = await getUserBySessionToken(sessionToken);
-
-    if (!existingUser) {
-      return res.sendStatus(403);
-    }
-    merge(req, { identity: existingUser });
-
-    return next();
-  } catch (error) {
-    console.log(error);
-    return res.sendStatus(400);
+        if (user && user.userRole === "admin") {
+          next();
+        } else {
+          res
+            .status(403)
+            .send(
+              "Access forbidden: You do not have permission to access this resource."
+            );
+        }
+      }
+    });
+  } else {
+    res
+      .status(403)
+      .send(
+        "Access forbidden: You do not have permission to access this resource."
+      );
   }
 };

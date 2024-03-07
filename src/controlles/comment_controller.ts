@@ -1,75 +1,67 @@
 import express from "express";
-import {
-  CommentModel,
-  getComments,
-  createComment,
-  deleteCommentById,
-} from "../models/comment_model";
-
-export const getAllComments = async (
-  req: express.Request,
-  res: express.Response
-) => {
-  try {
-    const comments = await getComments();
-    res.status(200).json(comments);
-  } catch (error) {
-    console.log((error as Error).message);
-    res.status(500).json({ message: (error as Error).message });
-  }
-};
-
-export const getCommentsByBlogId = async (
-  req: express.Request,
-  res: express.Response
-) => {
-  try {
-    const { blog_id } = req.params;
-    const comment = await CommentModel.findOne({ blog_id });
-    return res.status(200).json(comment);
-  } catch (error) {
-    console.error("Error fetching comments:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
-  }
-};
+import CommentModel from "../models/blog_model";
+import { BlogModel, validateComment } from "../models/blog_model";
+import { UserModel, UserDocument } from "../models/user_model";
+import jwt from "jsonwebtoken";
 
 export const createOneComment = async (
   req: express.Request,
-  res: express.Response
+  res: express.Response,
+  next: express.NextFunction
 ) => {
   try {
-    const { commented_date, comment, commentor, blog_name } = req.body;
-    const existingComment = await CommentModel.findOne({
-      commentor,
-    });
-    if (existingComment) {
-      return res
-        .status(400)
-        .json({ message: "You have already liked this blog." });
+    const { blogId } = req.params;
+    const { comment } = req.body;
+    let user: UserDocument;
+
+    const { error } = validateComment(req.body);
+    if (error) {
+      return res.status(400).send(error.details[0].message);
     }
-    const comments = await createComment({
-      commentor,
-      comment,
-      blog_name,
-    });
-    res.status(200).json(comments);
-  } catch (error) {
-    console.log((error as Error).message);
-    res.status(500).json({ message: (error as Error).message });
-  }
-};
 
-export const deleteComment = async (
-  req: express.Request,
-  res: express.Response
-) => {
-  try {
-    const { id } = req.params;
+    const blog = await BlogModel.findById(blogId).populate("comments");
 
-    const deletedComment = await deleteCommentById(id);
-    return res.json(deletedComment);
-  } catch (error) {
-    console.log(error);
-    return res.sendStatus(400);
+    const token = req.cookies.jwt;
+
+    if (token) {
+      jwt.verify(token, "MARTINE_API", async (err: any, decodedToken: any) => {
+        if (err) {
+          res.status(403).send("No Token found: you need to login!");
+        } else {
+          user = await UserModel.findById(decodedToken.id);
+
+          if (!user) {
+            return res.status(404).json({ message: "please login required" });
+          }
+
+          if (!blog) {
+            return res.status(404).json({ message: "Blog not found" });
+          }
+          if (blog.comments.some((comment) => comment.user?.equals(user._id))) {
+            return res
+              .status(403)
+              .send(
+                "You have already commented on this blog. You can't comment twice!"
+              );
+          }
+
+          const newComment = {
+            user: user._id,
+            name: user.email,
+            comment,
+            blog: blogId,
+          };
+
+          blog.comments.push(newComment);
+
+          await blog.save();
+
+          return res.status(201).json(newComment);
+        }
+      });
+    }
+  } catch (err) {
+    console.error("Error adding comment:", err);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };

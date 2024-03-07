@@ -1,35 +1,45 @@
 import mongoose from "mongoose";
+import Joi from "joi";
 
+export interface UserDocument extends Document {
+  _id: any;
+  username: string;
+  email: string;
+  password: string;
+  userRole: string;
+  id: mongoose.Types.ObjectId;
+  token: string;
+}
+
+const userSchema1 = Joi.object({
+  username: Joi.string(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).required(),
+  userRole: Joi.string(),
+});
+
+export const validateUser = (data: UserDocument) => {
+  return userSchema1.validate(data);
+};
 const UserSchema = new mongoose.Schema({
   username: {
     type: String,
-    required: true,
   },
   email: {
     type: String,
     required: true,
   },
-  authentication: {
-    password: {
-      type: String,
-      required: true,
-      select: false,
-    },
-    salt: {
-      type: String,
-      select: false,
-    },
-    sessionToken: {
-      type: String,
-      select: false,
-    },
+  token: {
+    type: String,
   },
-  blogs: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "BlogModel",
-    },
-  ],
+  password: {
+    type: String,
+    required: true,
+  },
+  userRole: {
+    type: String,
+    default: "user",
+  },
 });
 
 export const UserModel = mongoose.model("UserModel", UserSchema);
@@ -44,16 +54,6 @@ export const getUserById = (id: string) => UserModel.findById(id);
 
 export const getUserBySessionToken = (sessionToken: string) =>
   UserModel.findOne({ "authentication.sessionToken": sessionToken });
-
-export const updateUserSessionToken = (
-  sessionToken: string,
-  newSessionToken: string | null
-) =>
-  UserModel.findOneAndUpdate(
-    { "authentication.sessionToken": sessionToken },
-    { $set: { "authentication.sessionToken": newSessionToken } },
-    { new: true }
-  );
 
 export const createUser = (values: Record<string, any>) =>
   new UserModel(values).save().then((user) => user.toObject());

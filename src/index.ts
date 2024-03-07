@@ -5,10 +5,12 @@ import cookieParser from "cookie-parser";
 import compression from "compression";
 import cors from "cors";
 import mongoose from "mongoose";
+import swaggerDocs from "./utils/swagger";
 
 import router from "./router/index_router";
 
 const app = express();
+swaggerDocs(app, 5000);
 
 app.use(
   cors({
@@ -29,7 +31,7 @@ server.listen(PORT, () => {
 });
 
 const MONGO_URL =
-  "mongodb+srv://martinemahirwe:<>@cluster0.pmiinxm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+  "mongodb+srv://martinemahirwe:mahirwe@cluster0.pmiinxm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
 mongoose.Promise = Promise;
 mongoose.connect(MONGO_URL).then(() => {

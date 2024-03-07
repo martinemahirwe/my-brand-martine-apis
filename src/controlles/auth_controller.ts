@@ -1,95 +1,78 @@
 import express from "express";
-import { authentication, random } from "../helpers/auth_helper";
-import {
-  getUserByEmail,
-  createUser,
-  getUserBySessionToken,
-  updateUserSessionToken,
-} from "../models/user_model";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+dotenv.config();
+
+import { getUserByEmail, createUser, validateUser } from "../models/user_model";
 
 export const login = async (req: express.Request, res: express.Response) => {
   try {
+    const maxAge = 2 * 24 * 60 * 60;
     const { email, password } = req.body;
-    if (!email || !password) {
-      return res.sendStatus(400);
+    const { error } = validateUser(req.body);
+    if (error) {
+      return res
+        .status(400)
+        .send("Validation failed: " + error.details[0].message);
     }
-    const user = await getUserByEmail(email).select(
-      "+authentication.salt + authentication.password"
-    );
+    const user = await getUserByEmail(email);
+
     if (!user) {
-      return res.sendStatus(400);
+      return res.status(400).json({ message: "Invalid email or password" });
     }
-    const expectedHash = authentication(user.authentication.salt, password);
 
-    if (user.authentication.password !== expectedHash) {
-      return res.sendStatus(400);
+    const passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatch) {
+      return res.status(400).json({ message: "Invalid email or password" });
     }
-    const salt = random();
-    user.authentication.sessionToken = authentication(
-      salt,
-      user._id.toString()
-    );
 
-    await user.save();
-
-    res.cookie("MARTINE-AUTH", user.authentication.sessionToken, {
-      domain: "localhost",
-      path: "/",
+    const token = jwt.sign({ id: user.id }, "MARTINE_API", {
+      expiresIn: maxAge,
     });
-    return res.status(200).json(user).end();
+
+    res.cookie("jwt", token, { httpOnly: true, maxAge: maxAge * 1000 });
+
+    res.status(200).json({
+      user: { _id: user._id, email: user.email, userRole: user.userRole },
+      token,
+    });
   } catch (error) {
-    console.log(error);
-    return res.sendStatus(400);
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
-
-export const logout = async (req: express.Request, res: express.Response) => {
-  try {
-    const sessionToken = req.cookies(["MARTINE-AUTH"]);
-    if (!sessionToken) {
-      return res.sendStatus(401);
-    }
-    const user = await getUserBySessionToken(sessionToken);
-    if (!user) {
-      return res.sendStatus(401);
-    }
-    await updateUserSessionToken(sessionToken, null);
-    res.clearCookie("MARTINE-AUTH", {
-      domain: "localhost",
-      path: "/",
-    });
-    return res.sendStatus(200).redirect("/users/login");
-  } catch (error) {
-    console.log(error);
-    return res.sendStatus(500);
-  }
+export const logout = (req: express.Request, res: express.Response) => {
+  res.cookie("jwt", "", { maxAge: 1 });
+  res.send("Logged out successfully");
 };
 
 export const register = async (req: express.Request, res: express.Response) => {
   try {
-    console.log(req.body);
-    const { email, password, username } = req.body;
-    if (!email || !password || !username) {
-      return res.sendStatus(400);
+    const { email, password, userRole } = req.body;
+
+    const { error } = validateUser(req.body);
+    if (error) {
+      return res.status(400).send(error.details[0].message);
     }
+
     const existingUser = await getUserByEmail(email);
-    console.log(existingUser);
+
     if (existingUser) {
-      return res.sendStatus(400);
+      return res.status(400).json({ message: "Email address already in use" });
     }
-    const salt = random();
-    const user = await createUser({
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await createUser({
       email,
-      username,
-      authentication: {
-        salt,
-        password: authentication(salt, password),
-      },
+      password: hashedPassword,
+      userRole,
     });
-    console.log(user);
-    return res.status(200).json(user).end();
-  } catch (error) {
-    console.log(error);
-    return res.sendStatus(400);
+
+    return res.status(201).json(newUser);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

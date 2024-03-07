@@ -2,7 +2,7 @@ import express from "express";
 import {
   getMessages,
   createMessage,
-  deleteMessageById,
+  deleteMessageById,validateMessage
 } from "../models/contact_model";
 
 export const getAllMessages = async (
@@ -34,6 +34,10 @@ export const createNewMessage = async (
     if (!name || !email || !message) {
       return res.sendStatus(400);
     }
+      const { error } = validateMessage(req.body);
+      if (error) {
+        return res.status(400).send(error.details[0].message);
+      }
     const newMessage = await createMessage({
       name,
       email,
