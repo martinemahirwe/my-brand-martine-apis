@@ -1,4 +1,18 @@
 import mongoose from "mongoose";
+import Joi from "joi";
+
+const messageSchemaJoi = Joi.object({
+  name: Joi.string().required(),
+  message: Joi.string().required(),
+  email: Joi.string().email().required(),
+});
+export const validateMessage = (data: IMessage) =>
+  messageSchemaJoi.validate(data);
+interface IMessage extends Document {
+  name: string;
+  message: string;
+  email: string;
+}
 
 const MessageSchema = new mongoose.Schema({
   name: {

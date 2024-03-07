@@ -1,9 +1,10 @@
 import express from "express";
+import bcrypt from "bcrypt";
 import {
   getUsers,
   deleteUserById,
   getUserById,
-  getUserByEmail,
+  UserModel,
 } from "../models/user_model";
 
 export const getAllUsers = async (
@@ -11,7 +12,7 @@ export const getAllUsers = async (
   res: express.Response
 ) => {
   try {
-    const users = await getUsers();
+    const users = await UserModel.find({}, { password: 0 });
 
     return res.status(200).json(users);
   } catch (error) {
@@ -48,25 +49,32 @@ export const deleteUser = async (
   }
 };
 
-export const updateUser = async (
+export const resetPassword = async (
   req: express.Request,
   res: express.Response
 ) => {
   try {
-    const { id } = req.params;
-    const { username } = req.body;
-    if (!username) {
-      return res.sendStatus(400);
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).send("Username and newPassword are required");
     }
 
-    const user = await getUserById(id);
+    const user = await UserModel.findOne({ email });
 
-    user.username = username;
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
     await user.save();
 
-    return res.status(200).json(user).end();
+    return res
+      .status(200)
+      .json({ message: "Password updated successfully", user: user });
   } catch (error) {
-    console.log(error);
-    return res.sendStatus(400);
+    console.error("Error resetting password:", error);
+    return res.status(500).send("Internal server error");
   }
 };

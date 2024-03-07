@@ -1,12 +1,12 @@
-import axios from "axios";
 import express from "express";
 import {
   getBlogs,
   getBlogById,
   getBlogByTitle,
   createBlog,
-  updateBlogById,
   deleteBlogById,
+  BlogModel,
+  validateBlog,
 } from "../models/blog_model";
 
 export const getAllBlogs = async (
@@ -31,25 +31,8 @@ export const getOneBlogById = async (
 ) => {
   try {
     const { id } = req.params;
-    const blog = await getBlogById(id);
+    const blog = await BlogModel.find({ isPublished: true });
     res.status(200).json(blog);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      success: false,
-      error: "Server Error",
-    });
-  }
-};
-
-export const getAllPublished = async (
-  req: express.Request,
-  res: express.Response
-) => {
-  try {
-    const blogs = await getBlogs();
-    const published = blogs.filter((blog) => blog.is_published === true);
-    res.status(200).json(published);
   } catch (error) {
     console.log(error);
     res.status(500).json({
@@ -64,17 +47,27 @@ export const publishOneBlog = async (
   res: express.Response
 ) => {
   try {
-    const { title, published_date } = req.body;
-    if (!title || !published_date) {
-      return res.sendStatus(400);
+    const { title, publishedDate } = req.body;
+    if (!title || !publishedDate) {
+      return res.sendStatus(400).json({
+        success: false,
+        message: "enter valid credentials",
+      });
     }
-    const publishedBlog = await getBlogByTitle(title);
-    console.log(publishedBlog);
+    const publishedBlog = await BlogModel.findOneAndUpdate(
+      { title: title },
+      { $set: { isPublished: true, publishedDate: publishedDate } },
+      { new: true }
+    );
+
     if (!publishedBlog) {
-      return res.sendStatus(400);
+      return res.status(404).json({
+        success: false,
+        message: "Blog not found!",
+      });
     }
-    publishedBlog.is_published = true;
-    publishedBlog.published_date = published_date;
+    publishedBlog.isPublished = true;
+    publishedBlog.publishedDate = publishedDate;
 
     res.status(201).json(publishedBlog).end();
   } catch (error) {
@@ -94,33 +87,42 @@ export const createNewBlog = async (
     const {
       title,
       author,
-      published_date,
-      short_description,
+      publishedDate,
+      shortDescript,
       description,
-      image_link,
+      imageLink,
     } = req.body;
     if (
       !title ||
       !author ||
-      !published_date ||
-      !short_description ||
+      !publishedDate ||
+      !shortDescript ||
       !description ||
-      !image_link
+      !imageLink
     ) {
-      return res.sendStatus(400);
+      return res.status(400).json({ message: "Internal server error" });
+    }
+    const { error } = validateBlog(req.body);
+    if (error) {
+      return res
+        .status(400)
+        .send("Validation failed: " + error.details[0].message);
+    } else {
+      console.log("this is valid data!");
     }
     const existingBlog = await getBlogByTitle(title);
-    console.log(existingBlog);
     if (existingBlog) {
-      return res.sendStatus(400);
+      return res.sendStatus(400).json({
+        message: "the blog Already exists",
+      });
     }
     const newBlog = await createBlog({
       title,
       author,
-      published_date,
-      short_description,
+      publishedDate,
+      shortDescript,
       description,
-      image_link,
+      imageLink,
     });
     res.status(201).json(newBlog).end();
   } catch (error) {
@@ -153,37 +155,35 @@ export const updateBlog = async (
 ) => {
   try {
     const { id } = req.params;
-    const {
-      title,
-      short_description,
-      description,
-      image_link,
-      published_date,
-    } = req.body;
+    const { title, shortDescript, description, imageLink, publishedDate } =
+      req.body;
 
     if (
       !title ||
-      !published_date ||
-      !short_description ||
-      !image_link ||
+      !publishedDate ||
+      !shortDescript ||
+      !imageLink ||
       !description
     ) {
-      return res.sendStatus(400);
+      return res.sendStatus(400).json({ message: "enter correct data" });
     }
 
-    const update_blog = await updateBlogById(id, {
-      title,
-      short_description,
-      description,
-      image_link,
-      published_date,
-    });
-
-    update_blog.save();
-
-    return res.status(200).json(update_blog).end();
+    const updatedBlog = await BlogModel.findByIdAndUpdate(
+      id,
+      {
+        title,
+        shortDescript,
+        description,
+        imageLink,
+        publishedDate,
+      },
+      { new: true }
+    );
+    console.log(updatedBlog);
+    await updatedBlog.save();
+    return res.status(200).json(updatedBlog).end();
   } catch (error) {
     console.log(error);
-    return res.sendStatus(400);
+    return res.status(400).json({ message: "enter correct data" });
   }
 };
