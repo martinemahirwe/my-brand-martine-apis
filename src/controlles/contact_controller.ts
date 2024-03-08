@@ -70,6 +70,9 @@ export const deleteMessage = async (
     return res.json(deletedBlog);
   } catch (error) {
     console.log(error);
-    return res.sendStatus(400);
+    return res.status(400).json({
+      success: false,
+      error: "can not delete message",
+    });;
   }
 };

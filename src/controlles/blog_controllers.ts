@@ -1,11 +1,11 @@
 import express from "express";
 import {
   getBlogs,
-  getBlogById,
   getBlogByTitle,
   createBlog,
   deleteBlogById,
   BlogModel,
+  Blog,
   validateBlog,
 } from "../models/blog_model";
 
@@ -31,6 +31,29 @@ export const getOneBlogById = async (
 ) => {
   try {
     const { id } = req.params;
+    const blog = await BlogModel.findOne({ _id: id, isPublished: true });
+    if (blog) {
+      res.status(200).json(blog);
+    } else {
+      res.status(404).json({ error: "Blog not found" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
+export const getPublishedBlogs = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  const userInfo = req.userInfo;
+  console.log(userInfo);
+  
+  try {
     const blog = await BlogModel.find({ isPublished: true });
     res.status(200).json(blog);
   } catch (error) {
@@ -49,7 +72,7 @@ export const publishOneBlog = async (
   try {
     const { title, publishedDate } = req.body;
     if (!title || !publishedDate) {
-      return res.sendStatus(400).json({
+      return res.status(400).json({
         success: false,
         message: "enter valid credentials",
       });
@@ -100,7 +123,7 @@ export const createNewBlog = async (
       !description ||
       !imageLink
     ) {
-      return res.status(400).json({ message: "Internal server error" });
+      return res.status(400).json({ message: "there are missing parameters" });
     }
     const { error } = validateBlog(req.body);
     if (error) {
@@ -112,7 +135,7 @@ export const createNewBlog = async (
     }
     const existingBlog = await getBlogByTitle(title);
     if (existingBlog) {
-      return res.sendStatus(400).json({
+      return res.status(400).json({
         message: "the blog Already exists",
       });
     }
@@ -144,46 +167,53 @@ export const deleteBlog = async (
     const deletedBlog = await deleteBlogById(id);
     return res.json(deletedBlog);
   } catch (error) {
-    console.log(error);
-    return res.sendStatus(400);
+    return res.status(400).json({
+      success: false,
+      error: "blog not found",
+    });
   }
 };
 
-export const updateBlog = async (
-  req: express.Request,
-  res: express.Response
-) => {
+export const updateBlog = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
-    const { title, shortDescript, description, imageLink, publishedDate } =
-      req.body;
+    const { title, shortDescript, description, imageLink, publishedDate } = req.body;
 
-    if (
-      !title ||
-      !publishedDate ||
-      !shortDescript ||
-      !imageLink ||
-      !description
-    ) {
-      return res.sendStatus(400).json({ message: "enter correct data" });
+    interface UpdatedFields {
+      title?: string;
+      shortDescript?: string;
+      description?: string;
+      imageLink?: string;
+      publishedDate?: Date;
     }
+    const { error } = validateBlog(req.body);
+    if (error) {
+      return res
+        .status(400)
+        .send("Validation failed: " + error.details[0].message);
+    } else {
+      console.log("this is valid data!");
+    }
+    const updatedFields: UpdatedFields = {};
+    if (title) updatedFields.title = title;
+    if (shortDescript) updatedFields.shortDescript = shortDescript;
+    if (description) updatedFields.description = description;
+    if (imageLink) updatedFields.imageLink = imageLink;
+    if (publishedDate) updatedFields.publishedDate = publishedDate;
 
     const updatedBlog = await BlogModel.findByIdAndUpdate(
       id,
-      {
-        title,
-        shortDescript,
-        description,
-        imageLink,
-        publishedDate,
-      },
+      updatedFields as unknown as Blog,
       { new: true }
     );
-    console.log(updatedBlog);
-    await updatedBlog.save();
-    return res.status(200).json(updatedBlog).end();
+
+    if (!updatedBlog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
+
+    return res.status(200).json(updatedBlog);
   } catch (error) {
     console.log(error);
-    return res.status(400).json({ message: "enter correct data" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };

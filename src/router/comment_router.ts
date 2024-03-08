@@ -1,7 +1,7 @@
 import { createOneComment } from "../controlles/comment_controller";
 import { likeBlog } from "../controlles/likes_controller";
 import express from "express";
-import { isAuthenticated } from "../middlewares/index";
+import { extractToken } from "../middlewares/index";
 import { likeComment } from "../controlles/likes_controller";
 
 export default (router: express.Router) => {
@@ -75,7 +75,7 @@ export default (router: express.Router) => {
    *       500:
    *         description: Internal server error
    */
-  router.post("/comments/:blogId", isAuthenticated, createOneComment);
+  router.post("/comments/:blogId", extractToken, createOneComment);
 
   /**
    * @openapi
@@ -98,7 +98,7 @@ export default (router: express.Router) => {
    *       500:
    *         description: Internal server error
    */
-  router.post("/like/:blogId", isAuthenticated, likeBlog);
+  router.post("/like/:blogId", extractToken, likeBlog);
 
   /**
    * @openapi
@@ -121,5 +121,5 @@ export default (router: express.Router) => {
    *       500:
    *         description: Internal server error
    */
-  router.post("/comments/like/:commentId", isAuthenticated, likeComment);
+  router.post("/comments/like/:commentId", extractToken, likeComment);
 };

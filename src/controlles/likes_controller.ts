@@ -8,7 +8,7 @@ import jwt from "jsonwebtoken";
 export const likeBlog = async (req: express.Request, res: express.Response) => {
   try {
     const blogId = req.params.blogId;
-    let user: UserDocument;
+    let user: any;
 
     const blog = await BlogModel.findById(blogId).populate("comments");
 
@@ -58,9 +58,9 @@ export const likeComment = async (
 ) => {
   try {
     const blogId = req.params.blogId;
-    let user: UserDocument;
+    let user: any;
 
-    const blog = await BlogModel.findById(blogId).populate("comments");
+    const blog: any = await BlogModel.findById(blogId).populate("comments");
     const comments: any = blog.comments;
 
     const token = req.cookies.jwt;
@@ -79,7 +79,7 @@ export const likeComment = async (
             return res.status(404).json({ message: "Blog not found" });
           }
 
-          const userId = new Types.ObjectId(user._id.toString());
+          const userId = user._id.toString();
           const likedByUser = comments.likedBy.map((userId: any) =>
             userId.toString()
           );

@@ -4,7 +4,7 @@ import {
   getAllMessages,
 } from "../controlles/contact_controller";
 import express from "express";
-import { isAuthenticated, isAdmin } from "../middlewares/index";
+import { extractToken, isAdmin } from "../middlewares/index";
 
 export default (router: express.Router) => {
   /**
@@ -52,7 +52,7 @@ export default (router: express.Router) => {
    *       500:
    *         description: Internal server error
    */
-  router.get("/messages", isAuthenticated, isAdmin, getAllMessages);
+  router.get("/messages", extractToken, isAdmin, getAllMessages);
   /**
    * @openapi
    * components:
@@ -99,5 +99,5 @@ export default (router: express.Router) => {
    *       500:
    *         description: Internal server error
    */
-  router.delete("/messages/:id", isAuthenticated, isAdmin, deleteMessage);
+  router.delete("/messages/:id", extractToken, isAdmin, deleteMessage);
 };

@@ -6,7 +6,7 @@
 
 import express from "express";
 
-import { register, login, logout } from "../controlles/auth_controller";
+import { register, login,logout} from "../controlles/auth_controller";
 
 export default (router: express.Router) => {
   /**
@@ -70,6 +70,7 @@ export default (router: express.Router) => {
    *         description: Internal server error
    */
   router.post("/auth/login", login);
+
 
   /**
    * @openapi

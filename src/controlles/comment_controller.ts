@@ -12,7 +12,7 @@ export const createOneComment = async (
   try {
     const { blogId } = req.params;
     const { comment } = req.body;
-    let user: UserDocument;
+    let user: any;
 
     const { error } = validateComment(req.body);
     if (error) {
@@ -28,7 +28,7 @@ export const createOneComment = async (
         if (err) {
           res.status(403).send("No Token found: you need to login!");
         } else {
-          user = await UserModel.findById(decodedToken.id);
+          user = await UserModel.findById(decodedToken?.id);
 
           if (!user) {
             return res.status(404).json({ message: "please login required" });

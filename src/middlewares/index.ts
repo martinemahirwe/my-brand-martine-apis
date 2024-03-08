@@ -1,86 +1,61 @@
-import { get, merge } from "lodash";
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from 'express';
+import {UserModel} from '../models/user_model'
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
-import { UserModel } from "../models/user_model";
-dotenv.config();
 
-export const isAuthenticated = (
-  req: Request,
-  res: Response,
-  next: (err?: Error) => void
-) => {
-  const token = req.cookies.jwt;
+export interface CustomRequest extends Request {
+    user?: any; 
+}
 
-  if (token) {
-    jwt.verify(token, "MARTINE_API", (err: any, decodedToken: any) => {
-      if (err) {
-        console.log(err.message);
-        //res.redirect('/login');
-      } else {
+declare global {
+  namespace Express {
+    interface Request {
+      userInfo?: object|string;
+    }
+  } 
+}
+
+export const extractToken: any = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+      
+   let token = req.headers.authorization;
+   console.log(token);
+ 
+  if (!token) {
+    return res.status(401).json({
+      message: "no access token found",
+    });
+  }
+   jwt.verify(token, "MARTINE_API", (err, decoded) => {
+    if (err) {
+      return res.status(401).json({
+        message: "Invalid token",
+      });
+    }  
+    req.userInfo = decoded;
         next();
-      }
-    });
-  } else {
-    res.status(403).send("Access forbidden: You are not logged in");
-  }
-};
-export const isOwner = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params;
-    const currentUserId = get(req, "identity._id") as string;
-
-    if (!currentUserId) {
-      return res.sendStatus(403);
+    })
+  } catch (e) {
+        res.status(401).send({
+            message: 'unauthenticated'
+        });
+        return;
     }
-    if (currentUserId.toString() !== id) {
-      return res.sendStatus(403);
-    }
-    next();
-  } catch (error) {
-    console.log(error);
-    return res.sendStatus(400);
-  }
+
+}
+
+
+export const isAdmin = async (req: CustomRequest, res: Response, next: NextFunction) => {
+
+  const userInfo : any = req.userInfo;
+
+  if(!userInfo){
+    return res.status(403).send({message:"You don't have access to this resource beacuse no token"});
+}
+if(userInfo.userRole !== "admin"){
+return res.status(403).send({message:"You don't have access to this resource"})
+}else{
+    next()
+}
 };
 
-export const isAdmin = (
-  req: Request,
-  res: Response,
-  next: (err?: Error) => void
-) => {
-  const token = req.cookies.jwt;
 
-  if (token) {
-    jwt.verify(token, "MARTINE_API", async (err: any, decodedToken: any) => {
-      if (err) {
-        res
-          .status(403)
-          .send(
-            "Access forbidden: You do not have permission to access this resource."
-          );
-      } else {
-        const user = await UserModel.findById(decodedToken.id);
-
-        if (user && user.userRole === "admin") {
-          next();
-        } else {
-          res
-            .status(403)
-            .send(
-              "Access forbidden: You do not have permission to access this resource."
-            );
-        }
-      }
-    });
-  } else {
-    res
-      .status(403)
-      .send(
-        "Access forbidden: You do not have permission to access this resource."
-      );
-  }
-};

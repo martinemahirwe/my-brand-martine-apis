@@ -1,8 +1,6 @@
 import mongoose from "mongoose";
-import Document from "mongoose";
 const myDate = new Date();
 const dates = myDate.toUTCString();
-import { UserModel } from "../models/user_model";
 import Joi from "joi";
 export interface Blog extends Document {
   title: string;
@@ -77,24 +75,25 @@ const CommentModel = mongoose.model("Comment", commentSchema);
 export default CommentModel;
 
 const blogSchemaJoi = Joi.object({
-  title: Joi.string().required().max(70),
-  author: Joi.string().required(),
-  publishedDate: Joi.date().required(),
+  title: Joi.string().max(70),
+  author: Joi.string(),
+  publishedDate: Joi.date(),
   isPublished: Joi.boolean().default(false),
-  shortDescript: Joi.string().required().max(150),
-  description: Joi.string().required(),
-  imageLink: Joi.string().required(),
+  shortDescript: Joi.string().max(150),
+  description: Joi.string(),
+  imageLink: Joi.string(),
   comments: Joi.array().items(commentSchemaJoi),
   likes: Joi.number().default(0),
   likedBy: Joi.array().items(Joi.string().default(false)),
-  date: Joi.string().default(Joi.date().iso()),
-});
+  date: Joi.string().default(Joi.date().iso())
+}).or('title', 'author', 'publishedDate', 'shortDescript', 'description', 'imageLink');
+
 
 export const validateBlog = (data: Blog) => {
   return blogSchemaJoi.validate(data);
 };
 
-const BlogSchema = new mongoose.Schema({
+export const BlogSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,

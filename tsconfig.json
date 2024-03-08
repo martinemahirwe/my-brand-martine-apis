@@ -1,11 +1,20 @@
 {
   "compilerOptions": {
+    "target": "es2016",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "baseUrl": "src",
-    "outDir": "dist",
-    "sourceMap": true,
-    "noImplicitAny": true
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "sourceMap": true
   },
-  "include": ["src/**/*.ts", "src/utils/swagger.ts"]
+  "include": ["src/**/*.ts", "src/utils/swagger.ts"],
+  "exclude": ["node_modules"],
+  "ts-node": {
+    "transpileOnly": true,
+    "files": true
+  }
 }

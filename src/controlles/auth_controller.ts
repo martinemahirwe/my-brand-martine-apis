@@ -8,7 +8,6 @@ import { getUserByEmail, createUser, validateUser } from "../models/user_model";
 
 export const login = async (req: express.Request, res: express.Response) => {
   try {
-    const maxAge = 2 * 24 * 60 * 60;
     const { email, password } = req.body;
     const { error } = validateUser(req.body);
     if (error) {
@@ -28,11 +27,9 @@ export const login = async (req: express.Request, res: express.Response) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    const token = jwt.sign({ id: user.id }, "MARTINE_API", {
-      expiresIn: maxAge,
-    });
+    const token = jwt.sign({ id: user.id,userRole: user.userRole,email:user.email }, process.env.JWT_SECRET!);
 
-    res.cookie("jwt", token, { httpOnly: true, maxAge: maxAge * 1000 });
+    req.headers.authorization = token;
 
     res.status(200).json({
       user: { _id: user._id, email: user.email, userRole: user.userRole },
@@ -44,7 +41,7 @@ export const login = async (req: express.Request, res: express.Response) => {
   }
 };
 export const logout = (req: express.Request, res: express.Response) => {
-  res.cookie("jwt", "", { maxAge: 1 });
+  req.headers.authorization = "";
   res.send("Logged out successfully");
 };
 
@@ -72,7 +69,7 @@ export const register = async (req: express.Request, res: express.Response) => {
     });
 
     return res.status(201).json(newUser);
-  } catch (err) {
+  } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
 };

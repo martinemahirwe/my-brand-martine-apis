@@ -6,7 +6,7 @@ import {
   resetPassword,
   getUser,
 } from "../controlles/users_controllers";
-import { isAdmin, isAuthenticated } from "../middlewares/index";
+import { isAdmin, extractToken } from "../middlewares/index";
 
 export default (router: express.Router) => {
   /**
@@ -61,7 +61,7 @@ export default (router: express.Router) => {
    *       500:
    *         description: Internal server error
    */
-  router.get("/users", isAuthenticated, isAdmin, getAllUsers);
+  router.get("/users", extractToken, isAdmin, getAllUsers);
 
   /**
    * @openapi
@@ -112,7 +112,7 @@ export default (router: express.Router) => {
    *         description: Internal server error
    */
 
-  router.delete("/users/:id", isAuthenticated, isAdmin, deleteUser);
+  router.delete("/users/:id", extractToken, isAdmin, deleteUser);
 
   /**
    * @openapi

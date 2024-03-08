@@ -4,10 +4,11 @@ import {
   createNewBlog,
   updateBlog,
   deleteBlog,
+  getPublishedBlogs,
   getOneBlogById,
 } from "../controlles/blog_controllers";
 import express from "express";
-import { isAuthenticated, isAdmin } from "../middlewares/index";
+import { extractToken,isAdmin } from "../middlewares/index";
 
 export default (router: express.Router) => {
   /**
@@ -119,7 +120,54 @@ export default (router: express.Router) => {
    *       500:
    *         description: Internal server error
    */
-  router.get("/blogs", isAuthenticated, isAdmin, getAllBlogs);
+  router.get("/blogs",extractToken, isAdmin, getAllBlogs);
+
+  /**
+   * @openapi
+   * /blogs/published/{id}:
+   *   get:
+   *     summary: Get a single published blog by ID
+   *     tags: [Blogs]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the blog to retrieve
+   *     responses:
+   *       200:
+   *         description: Blog retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/BlogModel'
+   *       404:
+   *         description: Blog not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Blog not found
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   *                   example: Server Error
+   */
+
+  router.get("/blogs/published/:id", getOneBlogById);
 
   /**
    * @openapi
@@ -140,29 +188,7 @@ export default (router: express.Router) => {
    *         description: Internal server error
    */
 
-  router.get("/blogs/published", getOneBlogById);
-
-  // /**
-  //  * @openapi
-  //  * /blogs/published:
-  //  *   get:
-  //  *     summary: Get all published blogs
-  //  *     tags: [Blogs]
-  //  *     security:
-  //  *       - bearerAuth: []
-  //  *     responses:
-  //  *       "200":
-  //  *         description: Published blogs retrieved successfully
-  //  *         content:
-  //  *           application/json:
-  //  *             schema:
-  //  *               type: array
-  //  *               items:
-  //  *                 $ref: '#/components/schemas/BlogModel'
-  //  *       "500":
-  //  *         description: Internal server error
-  //  */
-  // router.get("/blogs/:published", isAuthenticated, getAllBlogs);
+  router.get("/blogs/published",getPublishedBlogs);
 
   /**
    * @openapi
@@ -183,55 +209,72 @@ export default (router: express.Router) => {
    *       500:
    *         description: Internal server error
    */
-  router.delete("/blogs/:id", isAuthenticated, isAdmin, deleteBlog);
+  router.delete("/blogs/:id", extractToken, isAdmin, deleteBlog);
 
   /**
-   * @openapi
-   * /blogs/{id}:
-   *   patch:
-   *     summary: Update a blog by ID
-   *     tags: [Blogs]
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         description: ID of the blog to update
-   *         schema:
-   *           type: string
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               title:
-   *                 type: string
-   *               shortDescript:
-   *                 type: string
-   *               description:
-   *                 type: string
-   *               imageLink:
-   *                 type: string
-   *               publishedDate:
-   *                 type: string
-   *                 format: date
-   *     responses:
-   *       200:
-   *         description: Blog updated successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/BlogModel'
-   *       400:
-   *         description: Bad request - Missing or invalid request body
-   *       404:
-   *         description: Blog not found
-   *       500:
-   *         description: Internal server error
-   */
+ * @openapi
+ * /blogs/{id}:
+ *   patch:
+ *     summary: Update a blog by ID
+ *     tags: [Blogs]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID of the blog to update
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               author:
+ *                 type: string
+ *               publishedDate:
+ *                 type: string
+ *                 format: date
+ *               isPublished:
+ *                 type: boolean
+ *               shortDescript:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               imageLink:
+ *                 type: string
+ *               comments:
+ *                 type: array
+ *                 items:
+ *                   $ref: '#/components/schemas/CommentModel'
+ *               likes:
+ *                 type: number
+ *               likedBy:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               date:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Blog updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/BlogModel'
+ *       400:
+ *         description: Incorrect or missing parameter in the request body
+ *       404:
+ *         description: Blog not found
+ *       500:
+ *         description: Internal server error
+ */
 
-  router.patch("/blogs/:id", isAuthenticated, isAdmin, updateBlog);
+
+  router.patch("/blogs/:id", extractToken, isAdmin, updateBlog);
 
   /**
    * @openapi
@@ -263,7 +306,7 @@ export default (router: express.Router) => {
    *       500:
    *         description: Internal server error
    */
-  router.post("/blogs/publish", isAuthenticated, isAdmin, publishOneBlog);
+  router.post("/blogs/publish",extractToken, isAdmin, publishOneBlog);
 
   /**
    * @openapi
@@ -300,7 +343,7 @@ export default (router: express.Router) => {
    *             schema:
    *               $ref: '#/components/schemas/BlogModel'
    *       '400':
-   *         description: Bad request - Missing or invalid request body
+   *         description: incorrect or missing parameter                  - Missing or invalid request body
    *         content:
    *           application/json:
    *             schema:
@@ -319,5 +362,5 @@ export default (router: express.Router) => {
    *                   type: string
    */
 
-  router.post("/blogs/create", isAuthenticated, isAdmin, createNewBlog);
+  router.post("/blogs/create", extractToken, isAdmin, createNewBlog);
 };

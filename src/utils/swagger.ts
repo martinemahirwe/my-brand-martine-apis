@@ -15,6 +15,10 @@ const options: swaggerJsdoc.Options = {
     servers: [
       {
         url: "http://localhost:5000",
+        description: "Local server",
+      },
+      {
+        url: "https://my-brand-martine-backendapis.onrender.com",
         description: "Development server",
       },
     ],
