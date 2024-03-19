@@ -21,7 +21,7 @@ export const createOneComment = async (
 
     const blog = await BlogModel.findById(blogId).populate("comments");
 
-    const token = req.cookies.jwt;
+    let token = req.headers.authorization;
 
     if (token) {
       jwt.verify(token, "MARTINE_API", async (err: any, decodedToken: any) => {
@@ -37,14 +37,6 @@ export const createOneComment = async (
           if (!blog) {
             return res.status(404).json({ message: "Blog not found" });
           }
-          if (blog.comments.some((comment) => comment.user?.equals(user._id))) {
-            return res
-              .status(403)
-              .send(
-                "You have already commented on this blog. You can't comment twice!"
-              );
-          }
-
           const newComment = {
             user: user._id,
             name: user.email,

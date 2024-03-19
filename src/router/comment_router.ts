@@ -1,8 +1,6 @@
 import { createOneComment } from "../controlles/comment_controller";
 import { likeBlog } from "../controlles/likes_controller";
 import express from "express";
-import { extractToken } from "../middlewares/index";
-import { likeComment } from "../controlles/likes_controller";
 
 export default (router: express.Router) => {
   /**
@@ -75,7 +73,7 @@ export default (router: express.Router) => {
    *       500:
    *         description: Internal server error
    */
-  router.post("/comments/:blogId", extractToken, createOneComment);
+  router.post("/comments/:blogId",createOneComment);
 
   /**
    * @openapi
@@ -98,28 +96,6 @@ export default (router: express.Router) => {
    *       500:
    *         description: Internal server error
    */
-  router.post("/like/:blogId", extractToken, likeBlog);
+  router.post("/like/:blogId",likeBlog);
 
-  /**
-   * @openapi
-   * /comments/like/{commentId}:
-   *   post:
-   *     summary: Like a comment
-   *     tags: [Likes]
-   *     parameters:
-   *       - in: path
-   *         name: commentId
-   *         schema:
-   *           type: string
-   *         required: true
-   *         description: The ID of the comment to like
-   *     responses:
-   *       200:
-   *         description: Comment liked successfully
-   *       404:
-   *         description: Comment not found
-   *       500:
-   *         description: Internal server error
-   */
-  router.post("/comments/like/:commentId", extractToken, likeComment);
 };

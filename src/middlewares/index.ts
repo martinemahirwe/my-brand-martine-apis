@@ -18,8 +18,7 @@ export const extractToken: any = async (req: CustomRequest, res: Response, next:
     try {
       
    let token = req.headers.authorization;
-   console.log(token);
- 
+   
   if (!token) {
     return res.status(401).json({
       message: "no access token found",
