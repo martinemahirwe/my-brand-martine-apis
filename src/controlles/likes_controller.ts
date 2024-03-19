@@ -12,7 +12,7 @@ export const likeBlog = async (req: express.Request, res: express.Response) => {
 
     const blog = await BlogModel.findById(blogId).populate("comments");
 
-    let token = req.headers.authorization;
+      let token = req.headers.authorization;
 
     if (token) {
       jwt.verify(token, "MARTINE_API", async (err: any, decodedToken: any) => {
@@ -28,20 +28,19 @@ export const likeBlog = async (req: express.Request, res: express.Response) => {
             return res.status(404).json({ message: "Blog not found" });
           }
           if (blog.likedBy.includes(user._id)) {
-            blog.likes--;
+            const index = blog.likedBy.indexOf(user._id);
+             blog.likedBy.splice(index, 1);
+             blog.likes--;
 
-            blog.likedBy = blog.likedBy.filter(
-              (userId) => userId.toString() !== user._id.toString()
-            );
+             await blog.save();
+             return res.status(200).json({ message: "Blog unliked successfully", likes: blog.likes });
           }
-
           blog.likes++;
           blog.likedBy.push(user._id);
+
           await blog.save();
 
-          return res
-            .status(200)
-            .json({ message: "Blog liked successfully", likes: blog.likes });
+          return res.status(200).json({ message: "Blog liked successfully", likes: blog.likes });
         }
       });
     }
